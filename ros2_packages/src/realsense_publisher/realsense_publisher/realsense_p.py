@@ -20,17 +20,29 @@ class PointCloudPublisher(Node):
 		self.pipe = rs.pipeline()
 		self.config = rs.config()
 		self.config.enable_stream(rs.stream.depth, 424, 240, rs.format.z16, 6)
+		self.config.enable_stream(rs.stream.color, 424, 240, rs.format.bgr8, 6)
+
 		self.pipe.start(self.config)
+
+		self.decimate = rs.decimation_filter(8)
+		self.align = rs.align(rs.stream.color)
 		
 		# extra data init
 		self.i = 0
 
 	def timer_callback(self):
 		frames = self.pipe.wait_for_frames()
-		depth = frames.get_depth_frame()
 		
-		if not depth:
+		aligned_frames = self.align.process(frames)
+		if (not aligned_frames.get_depth_frame()) or (not aligned_frames.get_color_frame()):
 			return
+
+		decimated = self.decimate.process(aligned_frames).as_frameset()
+
+		if (not decimated.get_depth_frame()) or (not decimated.get_color_frame()):
+			return
+	
+		depth = decimated.get_depth_frame()
 			
 		points = self.pc.calculate(depth)
 		
