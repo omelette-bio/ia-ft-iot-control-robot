@@ -37,20 +37,49 @@ class PointCloudPublisher(Node):
 		if (not aligned_frames.get_depth_frame()) or (not aligned_frames.get_color_frame()):
 			return
 
-		decimated = self.decimate.process(aligned_frames).as_frameset()
+		# decimated = self.decimate.process(aligned_frames).as_frameset()
 
-		if (not decimated.get_depth_frame()) or (not decimated.get_color_frame()):
-			return
+		# if (not decimated.get_depth_frame()) or (not decimated.get_color_frame()):
+		# 	return
 	
-		depth = decimated.get_depth_frame()
-			
-		points = self.pc.calculate(depth)
+		aligned_depth = aligned_frames.get_depth_frame()
+		aligned_colors = aligned_frames.get_color_frame()	
 		
+		points = self.pc.calculate(aligned_depth)
+		self.pc.map_to(aligned_colors)
+
+		# Récupère les points sous forme (N, 3)
 		verts = np.asanyarray(points.get_vertices())
-		xyz = verts.view(np.float32).reshape(-1, 3)
-		msg = self.numpy_to_pointcloud2(xyz, frame_id="camera_link")
-		self.publisher_.publish(msg)
-		self.get_logger().info(f'Sent pointcloud "{msg}"')
+		verts = verts.view(np.float32).reshape(-1, 3)
+
+		# Coordonnées texture (pour extraire les couleurs)
+		texcoords = np.asanyarray(points.get_texture_coordinates())
+		texcoords = texcoords.view(np.float32).reshape(-1, 2)
+
+		# Image couleur
+		color_image = np.asanyarray(aligned_colors.get_data())
+
+		# Couleurs associées aux points
+		h, w, _ = color_image.shape
+		colors = []
+
+		for u, v in texcoords:
+				x = min(max(int(u * w), 0), w-1)
+				y = min(max(int(v * h), 0), h-1)
+				colors.append(color_image[y, x])
+
+		colors = np.array(colors)
+
+
+		# points = self.pc.calculate(depth)
+		
+		# verts = np.asanyarray(points.get_vertices())
+		# xyz = verts.view(np.float32).reshape(-1, 3)
+
+
+		# msg = self.numpy_to_pointcloud2(xyz, frame_id="camera_link")
+		# self.publisher_.publish(msg)
+		# self.get_logger().info(f'Sent pointcloud "{msg}"')
 		
 		self.i+=1
 	
