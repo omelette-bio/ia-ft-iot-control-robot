@@ -14,7 +14,7 @@ class PointCloudPublisher(Node):
 		# publisher config
 		super().__init__('pointcloudpublisher')
 		self.point_cloud_publisher_ = self.create_publisher(PointCloud2, 'RealsensePointCloud', 10)
-		self.color_publisher_ = self.create_publisher(Image, 'RealsenseColor', 10)
+		self.color_publisher_ = self.create_publisher(Image, 'RealsenseImage', 10)
 		self.timer = self.create_timer(1/10, self.timer_callback)
 		
 		# realsense pipeline config
